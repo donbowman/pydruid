@@ -20,7 +20,8 @@ class Type(object):
     BOOLEAN = 3
 
 
-def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http'):
+def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http',
+            user='', password=''):
     """
     Constructor for creating a connection to the database.
 
@@ -28,7 +29,7 @@ def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http'):
         >>> curs = conn.cursor()
 
     """
-    return Connection(host, port, path, scheme)
+    return Connection(host, port, path, scheme, user, password)
 
 
 def check_closed(f):
@@ -97,12 +98,16 @@ class Connection(object):
         port=8082,
         path='/druid/v2/sql/',
         scheme='http',
+        user='',
+        password='',
     ):
         netloc = '{host}:{port}'.format(host=host, port=port)
         self.url = parse.urlunparse(
             (scheme, netloc, path, None, None, None))
         self.closed = False
         self.cursors = []
+        self.user = user
+        self.password = password
 
     @check_closed
     def close(self):
@@ -126,7 +131,7 @@ class Connection(object):
     @check_closed
     def cursor(self):
         """Return a new Cursor Object using the connection."""
-        cursor = Cursor(self.url)
+        cursor = Cursor(self.url, self.user, self.password)
         self.cursors.append(cursor)
 
         return cursor
@@ -147,8 +152,10 @@ class Cursor(object):
 
     """Connection cursor."""
 
-    def __init__(self, url):
+    def __init__(self, url, user='', password=''):
         self.url = url
+        self.user = user
+        self.password = password
 
         # This read/write attribute specifies the number of rows to fetch at a
         # time with .fetchmany(). It defaults to 1 meaning to fetch a single
@@ -263,7 +270,9 @@ class Cursor(object):
 
         headers = {'Content-Type': 'application/json'}
         payload = {'query': query}
-        r = requests.post(self.url, stream=True, headers=headers, json=payload)
+        auth = requests.auth.HTTPBasicAuth(self.user, self.password)
+        r = requests.post(self.url, stream=True, headers=headers, json=payload,
+                          auth=auth)
         if r.encoding is None:
             r.encoding = 'utf-8'
 
