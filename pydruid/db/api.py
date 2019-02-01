@@ -21,7 +21,7 @@ class Type(object):
 
 
 def connect(host='localhost', port=8082, path='/druid/v2/sql/', scheme='http',
-            user='', password=''):
+            user=None, password=None):
     """
     Constructor for creating a connection to the database.
 
@@ -98,8 +98,8 @@ class Connection(object):
         port=8082,
         path='/druid/v2/sql/',
         scheme='http',
-        user='',
-        password='',
+        user=None,
+        password=None,
     ):
         netloc = '{host}:{port}'.format(host=host, port=port)
         self.url = parse.urlunparse(
@@ -152,7 +152,7 @@ class Cursor(object):
 
     """Connection cursor."""
 
-    def __init__(self, url, user='', password=''):
+    def __init__(self, url, user=None, password=None):
         self.url = url
         self.user = user
         self.password = password
@@ -270,7 +270,8 @@ class Cursor(object):
 
         headers = {'Content-Type': 'application/json'}
         payload = {'query': query}
-        auth = requests.auth.HTTPBasicAuth(self.user, self.password)
+        auth = requests.auth.HTTPBasicAuth(self.user,
+                                           self.password) if self.user else None
         r = requests.post(self.url, stream=True, headers=headers, json=payload,
                           auth=auth)
         if r.encoding is None:
